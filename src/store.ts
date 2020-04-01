@@ -1,5 +1,5 @@
 import {observable, action} from "mobx";
-import ApiFetcher, {ApiMethodType, IApiFetcherProps, IRequestProps} from "./fetcher";
+import {ApiClient,ApiMethodType, IApiFetcherProps, IRequestProps} from "./client";
 
 export interface IStateRequestProps extends IRequestProps {
     consumeError?: boolean;
@@ -11,7 +11,7 @@ export interface IApiClientStoreProps extends IApiFetcherProps {
 
 }
 
-export default class ApiClientStore<T> extends ApiFetcher<T> {
+export class ApiClientWithStore<T = any> extends ApiClient<T> {
 
     @observable
     successMessage  = '';

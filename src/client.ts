@@ -20,6 +20,8 @@ export interface IRequestProps {
     options?: ApiFetchOptions;
 }
 
+export type TEndpointGetter<T> = (apiFetcher: ApiClient<T>) => T;
+
 class ResponseError extends Error {
 
     status              : number;
@@ -47,9 +49,10 @@ const parseResponse = (response: Response) => {
     return null;
 };
 
-export default class ApiFetcher<T> {
 
-    _endpoints: T = {} as T;
+export class ApiClient<T> {
+
+    endpoints: T = {} as T;
     baseUrl = '';
 
     constructor(props: IApiFetcherProps) {
@@ -125,8 +128,8 @@ export default class ApiFetcher<T> {
         return parseResponse(res);
     };
 
-    setEndpoints = (endpoints: T) => {
-        this._endpoints = endpoints;
+    setEndpoints = (endpointsGetter: TEndpointGetter<T>) => {
+        this.endpoints = endpointsGetter(this);
     };
 
     get = (requestProps: IRequestProps) => this._fetch('GET', requestProps);
