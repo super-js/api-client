@@ -1,0 +1,17 @@
+{
+   "compilerOptions"       : {
+      "target"                         : "es5",
+      "module"                         : "es6",
+      "outDir"                         : "./dist",
+      "sourceMap"                      : true,
+      "allowJs"                        : true,
+      "moduleResolution"               : "node",
+      "allowSyntheticDefaultImports"   : true,
+      "noImplicitAny"                  : false,
+      "emitDecoratorMetadata"          : true,
+      "experimentalDecorators"         : true
+   },
+   "include": [
+      "src/**/*"
+   ]
+}
