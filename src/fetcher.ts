@@ -1,4 +1,3 @@
-
 export type ApiMethodType     = 'GET' | 'POST' | 'PUT' | 'DELETE';
 export interface ApiFetchParams {
     [key: string]: any;
