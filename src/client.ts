@@ -3,15 +3,27 @@ export interface ApiFetchParams {
     [key: string]: any;
 }
 export interface ApiFetchOptions {
+    requestKey?: string;
     successMsg?: string;
     errorMsg?: string;
+    processingMsg?: string;
     errorRedirectTo?: string;
+    propagateError?: boolean;
 }
+
+export interface IApiRequestProgress {
+    type: 'processing' | 'success' | 'error',
+    message: string;
+}
+
+
+export type OnRequestProgress = (requestKey: string, apiRequestProgress: IApiRequestProgress) => void;
 
 export interface IApiFetcherProps {
     host: string;
     port?: number;
     version: string;
+    onRequestProgress?: OnRequestProgress;
 }
 
 export interface IRequestProps {
@@ -50,82 +62,127 @@ const parseResponse = (response: Response) => {
 };
 
 
-export class ApiClient<T> {
+export class ApiClient<T = any> {
 
     endpoints: T = {} as T;
     baseUrl = '';
+    onRequestProgress: OnRequestProgress;
 
     constructor(props: IApiFetcherProps) {
-        const {host, port, version} = props;
+        const {host, port, version, onRequestProgress} = props;
 
         this.baseUrl = `${host}${port ? `:${port}` : ''}/api/${version}`;
+        this.onRequestProgress = onRequestProgress;
     }
 
+    _onRequestProgress(requestKey: string, apiRequestProgress: IApiRequestProgress) {
+        if(typeof this.onRequestProgress === "function") {
+            this.onRequestProgress(requestKey, apiRequestProgress);
+        }
+    }
 
     _fetch = async (type: ApiMethodType, requestProps: IRequestProps): Promise<any> => {
 
-        const {path, params, options} = requestProps;
+        const {path, params = {}, options = {}} = requestProps;
 
-        const targetUrl: URL      = new URL(`${this.baseUrl}${path}`, location.href);
 
-        if(type === "GET") targetUrl.search    = new URLSearchParams(params).toString();
+        const requestKey = options.requestKey ? options.requestKey : `${Date.now()}_${type}_${requestProps.path}`;
+        let res: Response;
 
-        const hasFiles = Object.keys(params).some(paramCode => params[paramCode] instanceof File);
+        const reportRequestProgress = (requestProgressType: any, message: string) => {
+            if(options.hasOwnProperty(`${requestProgressType}Msg`)) {
+                this._onRequestProgress(requestKey, {
+                    type: requestProgressType,
+                    message
+                })
+            }
+        };
 
-        const _getBody = () => {
-            if(hasFiles) {
-                const formData = new FormData();
-                Object.keys(params).forEach(paramCode => {
-                    formData.append(paramCode, params[paramCode]);
+        try {
+
+
+            reportRequestProgress(
+                'processing',
+                options.processingMsg
+            );
+
+            const targetUrl: URL      = new URL(`${this.baseUrl}${path}`, location.href);
+
+            if(type === "GET") targetUrl.search    = new URLSearchParams(params).toString();
+
+            const hasFiles = Object.keys(params).some(paramCode => params[paramCode] instanceof File);
+
+            const _getBody = () => {
+                if(hasFiles) {
+                    const formData = new FormData();
+                    Object.keys(params).forEach(paramCode => {
+                        formData.append(paramCode, params[paramCode]);
+                    });
+
+                    return formData;
+                } else {
+                    return type !== "GET" ? JSON.stringify(params) : undefined;
+                }
+            };
+
+            let headers = {
+                'Accept'        : 'application/json'
+            };
+
+            if(!hasFiles) headers['Content-Type'] = 'application/json';
+
+            let request = new Request(targetUrl.toString(), {
+                method      : type,
+                headers     : new Headers(headers),
+                mode        : "cors",
+                credentials : 'include',
+                body        : _getBody()
+            });
+
+            res = await fetch(request);
+
+            if(!res.ok) {
+
+                let error = await parseResponse(res);
+
+                if(typeof error === "string") {
+                    error = {
+                        name: res.statusText,
+                        message: error
+                    }
+                } else if(!error) {
+                    error = {
+                        name: 'Unknown error',
+                        message: 'Unknown error'
+                    }
+                }
+
+                throw new ResponseError({
+                    name                : error.name,
+                    message             : error.message,
+                    status              : res.status,
+                    validationErrors    : error.validationErrors ? error.validationErrors : {}
                 });
 
-                return formData;
             } else {
-                return type !== "GET" ? JSON.stringify(params) : undefined;
-            }
-        };
-
-        let headers = {
-            'Accept'        : 'application/json'
-        };
-
-        if(!hasFiles) headers['Content-Type'] = 'application/json';
-
-        let request = new Request(targetUrl.toString(), {
-            method      : type,
-            headers     : new Headers(headers),
-            mode        : "cors",
-            credentials : 'include',
-            body        : _getBody()
-        });
-
-        const res = await fetch(request);
-
-        if(!res.ok) {
-
-            let error = await parseResponse(res);
-
-            if(typeof error === "string") {
-                error = {
-                    name: res.statusText,
-                    message: error
-                }
-            } else if(!error) {
-                error = {
-                    name: 'Unknown error',
-                    message: 'Unknown error'
-                }
+                reportRequestProgress(
+                    'success',
+                    options.successMsg
+                );
             }
 
-            throw new ResponseError({
-                name                : error.name,
-                message             : error.message,
-                status              : res.status,
-                validationErrors    : error.validationErrors ? error.validationErrors : {}
-            });
+            return parseResponse(res);
+
+        } catch(err) {
+
+            reportRequestProgress(
+                'error',
+                options.errorMsg
+            );
+
+            if(options.propagateError) throw err;
         }
 
-        return parseResponse(res);
     };
 
     setEndpoints = (endpointsGetter: TEndpointGetter<T>) => {
