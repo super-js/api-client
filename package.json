@@ -1,5 +1,5 @@
 {
-  "name": "api-client",
+  "name": "@super-js/api-client",
   "version": "0.0.1",
   "main": "src/index.ts",
   "license": "MIT",
