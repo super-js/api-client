@@ -19,10 +19,10 @@ export interface IApiRequestProgress {
 
 export type OnRequestProgress = (requestKey: string, apiRequestProgress: IApiRequestProgress) => void;
 
-export interface IApiFetcherProps {
+export interface IApiClientOptions {
     host: string;
     port?: number;
-    version: string;
+    version?: string;
     onRequestProgress?: OnRequestProgress;
 }
 
@@ -68,10 +68,10 @@ export class ApiClient<T = any> {
     baseUrl = '';
     onRequestProgress: OnRequestProgress;
 
-    constructor(props: IApiFetcherProps) {
+    constructor(props: IApiClientOptions) {
         const {host, port, version, onRequestProgress} = props;
 
-        this.baseUrl = `${host}${port ? `:${port}` : ''}/api/${version}`;
+        this.baseUrl = `${host}${port ? `:${port}` : ''}${version ? `/${version}` : ''}`;
         this.onRequestProgress = onRequestProgress;
     }
 
