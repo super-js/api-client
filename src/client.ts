@@ -185,7 +185,7 @@ export class ApiClient<T = any> {
 
     };
 
-    setEndpoints = (endpointsGetter: TEndpointGetter<T>) => {
+    registerEndpoints = (endpointsGetter: TEndpointGetter<T>) => {
         this.endpoints = endpointsGetter(this);
     };
 
