@@ -68,6 +68,8 @@ export class ApiClient<T = any> {
     baseUrl = '';
     onRequestProgress: OnRequestProgress;
 
+    _csrfToken = "";
+
     constructor(props: IApiClientOptions) {
         const {host, port, version, onRequestProgress} = props;
 
