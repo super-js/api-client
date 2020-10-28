@@ -190,9 +190,6 @@ export class ApiClient<T = any> {
             return parsedResponse;
 
         } catch(err) {
-
-            console.error(err)
-
             reportRequestProgress(
                 'error',
                 options.errorMsg
