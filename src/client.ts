@@ -1,3 +1,5 @@
+import {History} from "history";
+
 export type ApiMethodType     = 'GET' | 'POST' | 'PUT' | 'DELETE';
 export interface ApiFetchParams {
     [key: string]: any;
@@ -7,7 +9,8 @@ export interface ApiFetchOptions {
     successMsg?: string;
     errorMsg?: string;
     processingMsg?: string;
-    errorRedirectTo?: string;
+    errorRedirectTo?: ((data: any) => string) | string;
+    successRedirectTo?: ((data: any) => string) | string;
     propagateError?: boolean;
 }
 
@@ -24,6 +27,7 @@ export interface IApiClientOptions {
     port?: number;
     version?: string;
     onRequestProgress?: OnRequestProgress;
+    history?: History;
 }
 
 export interface IRequestProps {
@@ -67,20 +71,26 @@ export class ApiClient<T = any> {
     endpoints: T = {} as T;
     baseUrl = '';
     onRequestProgress: OnRequestProgress;
+    history: History;
 
     _csrfToken = "";
 
     constructor(props: IApiClientOptions) {
-        const {host, port, version, onRequestProgress} = props;
+        const {host, port, version, onRequestProgress, history} = props;
 
         this.baseUrl = `${host}${port ? `:${port}` : ''}${version ? `/${version}` : ''}`;
         this.onRequestProgress = onRequestProgress;
+        this.history = history;
     }
 
     _onRequestProgress(requestKey: string, apiRequestProgress: IApiRequestProgress) {
         if(typeof this.onRequestProgress === "function") {
             this.onRequestProgress(requestKey, apiRequestProgress);
         }
+    }
+
+    _redirectTo(targetUrl) {
+        if(this.history && targetUrl) this.history.push(targetUrl);
     }
 
     _fetch = async (type: ApiMethodType, requestProps: IRequestProps): Promise<any> => {
@@ -142,28 +152,26 @@ export class ApiClient<T = any> {
             });
 
             res = await fetch(request);
+            let parsedResponse = await parseResponse(res);
 
             if(!res.ok) {
-
-                let error = await parseResponse(res);
-
-                if(typeof error === "string") {
-                    error = {
+                if(typeof parsedResponse === "string") {
+                    parsedResponse = {
                         name: res.statusText,
-                        message: error
+                        message: parsedResponse
                     }
-                } else if(!error) {
-                    error = {
+                } else if(!parsedResponse) {
+                    parsedResponse = {
                         name: 'Unknown error',
                         message: 'Unknown error'
                     }
                 }
 
                 throw new ResponseError({
-                    name                : error.name,
-                    message             : error.message,
+                    name                : parsedResponse.name,
+                    message             : parsedResponse.message,
                     status              : res.status,
-                    validationErrors    : error.validationErrors ? error.validationErrors : {}
+                    validationErrors    : parsedResponse.validationErrors ? parsedResponse.validationErrors : {}
                 });
 
             } else {
@@ -171,11 +179,19 @@ export class ApiClient<T = any> {
                     'success',
                     options.successMsg
                 );
+
+                if(options.successRedirectTo) {
+                    this._redirectTo(
+                        typeof options.successRedirectTo === "function" ? options.successRedirectTo(parsedResponse) : options.successRedirectTo
+                    )
+                }
             }
 
-            return parseResponse(res);
+            return parsedResponse;
 
         } catch(err) {
+
+            console.error(err)
 
             reportRequestProgress(
                 'error',
@@ -183,6 +199,12 @@ export class ApiClient<T = any> {
             );
 
             if(options.propagateError) throw err;
+
+            if(options.errorRedirectTo) {
+                this._redirectTo(
+                    typeof options.errorRedirectTo === "function" ? options.errorRedirectTo(err) : options.errorRedirectTo
+                )
+            }
         }
 
     };
