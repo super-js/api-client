@@ -47,10 +47,7 @@ class ResponseError extends Error {
         super(props.message);
 
         this.status             = props.status;
-        this.validationErrors   = Object.keys(props.validationErrors).reduce((_, parameterCode) => {
-            _.push(...props.validationErrors[parameterCode]);
-            return _;
-        }, []);
+        this.validationErrors   = props.validationErrors;
     }
 }
 
@@ -122,13 +119,22 @@ export class ApiClient<T = any> {
 
             if(type === "GET") targetUrl.search    = new URLSearchParams(params).toString();
 
-            const hasFiles = Object.keys(params).some(paramCode => params[paramCode] instanceof File);
+            const _isFile = param => param instanceof File
+                || Array.isArray(param) && param.some(p => p instanceof File);
+
+            const _hasFiles = Object.keys(params).some(paramCode => _isFile(params[paramCode]));
 
             const _getBody = () => {
-                if(hasFiles) {
+                if(_hasFiles) {
                     const formData = new FormData();
                     Object.keys(params).forEach(paramCode => {
-                        formData.append(paramCode, params[paramCode]);
+                        if(Array.isArray(params[paramCode]) && _isFile(params[paramCode])) {
+                            params[paramCode]
+                                .forEach((fileParam, fileParamIx) => formData.append(`${paramCode}[${fileParamIx}]`, fileParam))
+                        } else {
+                            formData.append(paramCode, params[paramCode]);
+                        }
+
                     });
 
                     return formData;
@@ -141,7 +147,7 @@ export class ApiClient<T = any> {
                 'Accept'        : 'application/json'
             };
 
-            if(!hasFiles) headers['Content-Type'] = 'application/json';
+            if(!_hasFiles) headers['Content-Type'] = 'application/json';
 
             let request = new Request(targetUrl.toString(), {
                 method      : type,
