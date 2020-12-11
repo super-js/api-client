@@ -130,7 +130,13 @@ export class ApiClient<T = any> {
                     Object.keys(params).forEach(paramCode => {
                         if(Array.isArray(params[paramCode]) && _isFile(params[paramCode])) {
                             params[paramCode]
-                                .forEach((fileParam, fileParamIx) => formData.append(`${paramCode}[${fileParamIx}]`, fileParam))
+                                .forEach((fileParam, fileParamIx) => {
+                                    formData.append(
+                                        `${paramCode}[${fileParamIx}]`,
+                                        fileParam instanceof File ?
+                                            fileParam : JSON.stringify(fileParam)
+                                    );
+                                })
                         } else {
                             formData.append(paramCode, params[paramCode]);
                         }
