@@ -1,2 +1,6 @@
 yarn.lock
+jest.config.js
 tsconfig.json
+src/
+README.md
+.gitignore

@@ -1,4 +1,4 @@
-import {History} from "history";
+import type {History} from "history";
 
 export type ApiMethodType     = 'GET' | 'POST' | 'PUT' | 'DELETE';
 export interface ApiFetchParams {

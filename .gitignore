@@ -1,3 +1,5 @@
 node_modules
 .idea
-.awcache
+src/**/*.js
+src/**/*.js.map
+lib/
