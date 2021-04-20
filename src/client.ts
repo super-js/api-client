@@ -51,7 +51,7 @@ class ResponseError extends Error {
     }
 }
 
-const parseResponse = (response: Response) => {
+const parseResponse = async (response: Response) => {
     const contentType = response.headers.get('content-type');
 
     if(contentType) {
@@ -59,7 +59,7 @@ const parseResponse = (response: Response) => {
         if(contentType.includes('json')) return response.json();
     }
 
-    return null;
+    return response.blob();
 };
 
 
