@@ -1,2 +1,2 @@
 # @super-js/api-client
-TBA
+Front API client based on Web Fetch with no 3rd party runtime dependencies
