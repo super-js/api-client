@@ -28,6 +28,7 @@ export interface IApiClientOptions {
     version?: string;
     onRequestProgress?: OnRequestProgress;
     history?: History;
+    credentials?: RequestCredentials;
 }
 
 export interface IRequestProps {
@@ -70,7 +71,7 @@ export class ApiClient<T = any> {
     onRequestProgress: OnRequestProgress;
     history: History;
 
-    _csrfToken = "";
+    _credentials: RequestCredentials;
 
     constructor(props: IApiClientOptions) {
         const {host, port, version, onRequestProgress, history} = props;
@@ -78,6 +79,8 @@ export class ApiClient<T = any> {
         this.baseUrl = `${host}${port ? `:${port}` : ''}${version ? `/${version}` : ''}`;
         this.onRequestProgress = onRequestProgress;
         this.history = history;
+
+        this._credentials = props.credentials || "same-origin";
     }
 
     _onRequestProgress(requestKey: string, apiRequestProgress: IApiRequestProgress) {
@@ -159,7 +162,7 @@ export class ApiClient<T = any> {
                 method      : type,
                 headers     : new Headers(headers),
                 mode        : "cors",
-                credentials : 'include',
+                credentials : this._credentials,
                 body        : _getBody()
             });
 
